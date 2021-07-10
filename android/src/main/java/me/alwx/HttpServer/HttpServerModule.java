@@ -6,6 +6,8 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactMethod;
 
+import com.facebook.react.bridge.ReadableMap;
+
 import java.io.IOException;
 
 import android.util.Log;
@@ -46,9 +48,9 @@ public class HttpServerModule extends ReactContextBaseJavaModule implements Life
     }
 
     @ReactMethod
-    public void respond(String requestId, int code, String type, String body) {
+    public void respond(String requestId, int code, String type, String body, ReadableMap headers) {
         if (server != null) {
-            server.respond(requestId, code, type, body);
+            server.respond(requestId, code, type, body, headers);
         }
     }
 

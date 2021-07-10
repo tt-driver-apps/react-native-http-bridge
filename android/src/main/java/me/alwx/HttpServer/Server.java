@@ -7,10 +7,11 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.ReadableType;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -62,15 +63,50 @@ public class Server extends NanoHTTPD {
         return response;
     }
 
-    public void respond(String requestId, int code, String type, String body) {
-        responses.put(requestId, newFixedLengthResponse(Status.lookup(code), type, body));
+    public void respond(String requestId, int code, String type, String body, ReadableMap headers) {
+        Response response = newFixedLengthResponse(Status.lookup(code), type, body);
+        if (headers != null) {
+            ReadableMapKeySetIterator iterator = headers.keySetIterator();
+            while (iterator.hasNextKey()) {
+                String key = iterator.nextKey();
+                ReadableType readableType = headers.getType(key);
+                switch (readableType) {
+                    case Null:
+                        response.addHeader(key, "");
+                        break;
+                    case Boolean:
+                        response.addHeader(key, String.valueOf(headers.getBoolean(key)));
+                        break;
+                    case Number:
+                        response.addHeader(key, String.valueOf(headers.getDouble(key)));
+                        break;
+                    case String:
+                        response.addHeader(key, headers.getString(key));
+                        break;
+                    default:
+                        Log.d(TAG, "Could not convert with key: " + key + ".");
+                        break;
+                }
+            }
+        }
+        responses.put(requestId, response);
+    }
+
+    private ReadableMap getHeaders(IHTTPSession session) {
+        WritableMap headers = Arguments.createMap();
+        for (Map.Entry<String,String> entry : session.getHeaders().entrySet()) {
+            headers.putString(entry.getKey(), entry.getValue());
+        }
+        return headers;
     }
 
     private WritableMap fillRequestMap(IHTTPSession session, String requestId) throws Exception {
         Method method = session.getMethod();
         WritableMap request = Arguments.createMap();
+
         request.putString("url", session.getUri());
         request.putString("type", method.name());
+        request.putMap("headers", getHeaders(session));
         request.putString("requestId", requestId);
         
         Map<String, String> files = new HashMap<>();

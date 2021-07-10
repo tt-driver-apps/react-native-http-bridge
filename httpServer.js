@@ -22,7 +22,8 @@ module.exports = {
         DeviceEventEmitter.removeAllListeners('httpServerResponseReceived');
     },
 
-    respond: function (requestId, code, type, body) {
-        Server.respond(requestId, code, type, body);
-    }
+    respond: function (requestId, code, type, body, headers) {
+        Server.respond(requestId, code, type, body, headers);
+    },
+
 }

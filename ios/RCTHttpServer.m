@@ -45,11 +45,13 @@ RCT_EXPORT_MODULE();
                                                              body:@{@"requestId": requestId,
                                                                     @"postData": dataRequest.jsonObject,
                                                                     @"type": type,
+                                                                    @"headers": request.headers,
                                                                     @"url": request.URL.relativeString}];
             } else {
                 [self.bridge.eventDispatcher sendAppEventWithName:@"httpServerResponseReceived"
                                                              body:@{@"requestId": requestId,
                                                                     @"type": type,
+                                                                    @"headers": request.headers,
                                                                     @"url": request.URL.relativeString}];
             }
         } @catch (NSException *exception) {
@@ -93,11 +95,17 @@ RCT_EXPORT_METHOD(stop)
 RCT_EXPORT_METHOD(respond: (NSString *) requestId
                   code: (NSInteger) code
                   type: (NSString *) type
-                  body: (NSString *) body)
+                  body: (NSString *) body
+                  headers: (NSDictionary *) headers)
 {
     NSData* data = [body dataUsingEncoding:NSUTF8StringEncoding];
     GCDWebServerDataResponse* requestResponse = [[GCDWebServerDataResponse alloc] initWithData:data contentType:type];
     requestResponse.statusCode = code;
+    if (headers != NULL && [headers count]){
+        for(NSString* key in [headers allKeys]) {
+            [requestResponse setValue:(NSString *)[headers objectForKey:key] forAdditionalHeader:key];
+        }
+    }
 
     GCDWebServerCompletionBlock completionBlock = nil;
     @synchronized (self) {
