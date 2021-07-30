@@ -34,9 +34,11 @@ RCT_EXPORT_MODULE();
         NSString *requestId = [NSString stringWithFormat:@"%lld:%d", milliseconds, r];
 
         _completionBlocks = [[NSMutableDictionary alloc] init];
-         @synchronized (self) {
-             [_completionBlocks setObject:completionBlock forKey:requestId];
-         }
+        @synchronized (self) {
+            [_completionBlocks setObject:completionBlock forKey:requestId];
+        }
+        
+        NSLog(@"RCTHttpServer got request id: %@", requestId);
 
         @try {
             if ([GCDWebServerTruncateHeaderValue(request.contentType) isEqualToString:@"application/json"]) {
@@ -113,7 +115,12 @@ RCT_EXPORT_METHOD(respond: (NSString *) requestId
         [_completionBlocks removeObjectForKey:requestId];
     }
 
-    completionBlock(requestResponse);
+    @try {
+        if (completionBlock) completionBlock(requestResponse);
+    } @catch (NSException *exception) {
+        NSLog(@"RCTHttpServer response id: %@, error: %@", requestId, exception);
+    }
+    
 }
 
 @end
