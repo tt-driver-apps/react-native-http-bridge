@@ -33,10 +33,15 @@ RCT_EXPORT_MODULE();
         int r = arc4random_uniform(1000000);
         NSString *requestId = [NSString stringWithFormat:@"%lld:%d", milliseconds, r];
 
-        _completionBlocks = [[NSMutableDictionary alloc] init];
         @synchronized (self) {
             [_completionBlocks setObject:completionBlock forKey:requestId];
         }
+
+        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15.0 * NSEC_PER_SEC));
+        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+            // NSLog(@"RCTHttpServer attempt to clean request id: %@", requestId);
+            [self getCompletionBlock:requestId];
+        });
         
         NSLog(@"RCTHttpServer got request id: %@", requestId);
 
@@ -65,11 +70,22 @@ RCT_EXPORT_MODULE();
     }];
 }
 
+-(GCDWebServerCompletionBlock)getCompletionBlock: (NSString *) requestId{
+    GCDWebServerCompletionBlock completionBlock = nil;
+    @synchronized (self) {
+        completionBlock = [_completionBlocks objectForKey:requestId];
+        [_completionBlocks removeObjectForKey:requestId];
+    }
+    // NSLog(@"RCTHttpServer getCompletionBlock request id: %@ ,block: %@", requestId, completionBlock);
+    return completionBlock;
+}
+
 RCT_EXPORT_METHOD(start:(NSInteger) port
                   serviceName:(NSString *) serviceName)
 {
     RCTLogInfo(@"Running HTTP bridge server: %ld", port);
     NSMutableDictionary *_requestResponses = [[NSMutableDictionary alloc] init];
+    _completionBlocks = [[NSMutableDictionary alloc] init];
     
     dispatch_sync(dispatch_get_main_queue(), ^{
         _webServer = [[GCDWebServer alloc] init];
@@ -109,14 +125,11 @@ RCT_EXPORT_METHOD(respond: (NSString *) requestId
         }
     }
 
-    GCDWebServerCompletionBlock completionBlock = nil;
-    @synchronized (self) {
-        completionBlock = [_completionBlocks objectForKey:requestId];
-        [_completionBlocks removeObjectForKey:requestId];
-    }
+    GCDWebServerCompletionBlock completionBlock = [self getCompletionBlock:requestId];
 
     @try {
         if (completionBlock) completionBlock(requestResponse);
+        else NSLog(@"RCTHttpServer response id: %@, missing completionBlock!", requestId);
     } @catch (NSException *exception) {
         NSLog(@"RCTHttpServer response id: %@, error: %@", requestId, exception);
     }
