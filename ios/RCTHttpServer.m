@@ -133,7 +133,12 @@ RCT_EXPORT_METHOD(respond: (NSString *) requestId
     } @catch (NSException *exception) {
         NSLog(@"RCTHttpServer response id: %@, error: %@", requestId, exception);
     }
-    
+ 
+}
+
+- (void)invalidate
+{
+    [self stop];
 }
 
 @end
