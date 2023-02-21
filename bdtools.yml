@@ -1,0 +1,14 @@
+project: react-native-http-bridge
+scan_type:
+  - FULL_SCAN
+include_folders:
+  - android
+  - ios
+exclude_folders:
+  - desktop
+detectors_included:
+  - GIT
+  - GRADLE
+  - COCOAPODS
+passthrough:
+  - --detect.npm.dependency.types.excluded=DEV
